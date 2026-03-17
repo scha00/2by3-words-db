@@ -1,6 +1,6 @@
 # 2by3 Words — Progress Tracker
 
-**Last updated:** 2026-03-07
+**Last updated:** 2026-03-16
 **Branch:** `main`
 **Build status:** ✅ Builds clean (iPhone 17 simulator, iOS 26.2)
 
@@ -37,6 +37,8 @@
 | TTUICardActionButton | Single button + TTUICardActionBar (Detail · Dialogue · Progress · Bookmark) | `4104514` |
 | TTUITabBar | Custom tab bar with blur material, haptic, SF Symbol fill states | `4104514` |
 | CLAUDE.md v1.3 | Added UI design decisions section, engineer role prompt | `4104514` |
+| CLAUDE.md v1.5 | DB architecture refactored to 3-file split (en_words, en_examples, en_questions) | `—` |
+| migrate_to_split_db.py | Migrates single english_vocabulary.db → en_words.db + en_examples.db + en_questions.db | `—` |
 
 ---
 
@@ -54,12 +56,13 @@ _Nothing in progress._
 - [ ] Run `collect_data.py` to crawl Free Dictionary API
 - [ ] Curate difficulty ratings + exam tags (SAT/GRE/TOEFL/IELTS)
 - [ ] Generate conversations + questions per word
-- [ ] Generate `english_vocabulary.json`
-- [ ] Convert to `english_vocabulary.db` via `json_to_sqlite.py`
-- [ ] Add DB to Xcode project resources
+- [ ] Run `collect_data.py` + `update_db.py` to build `en_words.db`
+- [ ] Generate `en_examples.db` (AI conversations per word)
+- [ ] Generate `en_questions.db` (AI quiz questions per word)
+- [ ] Add all 3 DB files to Xcode project resources
 
 ### Phase 2 — Core Features
-- [ ] DatabaseService (SQLite read-only: words, conversations, questions)
+- [ ] DatabaseService (opens en_words.db, en_examples.db, en_questions.db; joins in Swift)
 - [ ] Word model bridging SQLite → TTUIWordCardModel
 - [ ] Category/deck selection screen
 - [ ] Main screen: TTUIWordCard + swipe navigation (up/down)
@@ -150,4 +153,5 @@ _None currently._
 - **ContentView.swift** is the default Xcode template — not yet wired to TTUI. Phase 2 will replace it.
 - **TTUI files are not yet added to the Xcode project navigator** — they live on disk but the `.xcodeproj` file doesn't reference them (no group entries). Must be added manually in Xcode (drag folder into project navigator, "Create groups") before they compile. Build currently succeeds because Xcode's default "compile all Swift files in the target directory" setting picks them up — but for correctness they should be formally added.
 - **Widget target** (Phase 6) is the natural trigger to extract TTUI into a local Swift Package. Full migration path documented in CLAUDE.md.
-- **DB file** (`.db`) is gitignored. When Phase 1 is complete, the DB will be added to Xcode resources but not tracked in git per `.gitignore` rules.
+- **DB file** (`.db`) is gitignored in the private repo. DB files live here (`2by3Words-db/`) and are distributed via GitHub Releases.
+- **CLAUDE.md updated to v1.5** with 3-DB architecture (`en_words.db`, `en_examples.db`, `en_questions.db`). Migration script (`migrate_to_split_db.py`) is ready. **PM should verify script output before proceeding to Phase 2 app integration.**

@@ -770,10 +770,11 @@ __pycache__/
 
 ### Two-repo workflow
 - **This repo (`2by3-words`):** All Swift code and data scripts
-- **Public repo (`2by3-words-db`):** DB files and PROGRESS.md
+- **Public repo (`2by3-words-db`):** DB files, PROGRESS.md, and CLAUDE.md
 - Clone both repos side by side: `~/Projects/2by3Words/` and `~/Projects/2by3Words-db/`
 - Never commit `.db` files to this repo — they belong in `2by3Words-db/`
 - Always update `../2by3Words-db/PROGRESS.md` at the end of every session
+- **CLAUDE.md sync:** Whenever CLAUDE.md is modified, manually copy it to `../2by3Words-db/CLAUDE.md` and push — both files must stay in sync
 
 ### PM communication protocol
 - The PM (Claude.ai) reads progress by fetching: `https://raw.githubusercontent.com/scha00/2by3-words-db/main/PROGRESS.md`

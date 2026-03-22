@@ -1,8 +1,8 @@
 # 2by3 Words — Progress Tracker
 
-**Last updated:** 2026-03-16 (evening)
+**Last updated:** 2026-03-22
 **Branch:** `main`
-**Build status:** ✅ Builds clean (iPhone 17 simulator, iOS 26.2)
+**Build status:** 🔄 Needs Xcode open to resolve SQLite.swift SPM package
 
 ---
 
@@ -13,7 +13,7 @@
 | Phase 0 | Xcode project setup | ✅ Done |
 | Phase 0 | TTUI design system | ✅ Done |
 | Phase 1 | Data collection & vocabulary DB | ❌ Not started |
-| Phase 2 | Core features (card UI, TTS, navigation) | ❌ Not started |
+| Phase 2 | Core features (card UI, TTS, navigation) | 🔄 In progress |
 | Phase 3 | Learning features (spaced repetition, decks) | ❌ Not started |
 | Phase 4 | Test features (quiz modes) | ❌ Not started |
 | Phase 5 | Monetization (AdMob, StoreKit 2) | ❌ Not started |
@@ -40,12 +40,21 @@
 | CLAUDE.md v1.5 | DB architecture refactored to 3-file split (en_words, en_examples, en_questions) | `—` |
 | migrate_to_split_db.py | Migrates single english_vocabulary.db → en_words.db + en_examples.db + en_questions.db | `f24e25e` |
 | DB migration run | 874 words / 1584 examples / 1584 questions / 0 warnings; all 3 files in `2by3Words-db/` | `49d14ba` |
+| SQLite.swift SPM | Added `SQLite.swift 0.15.3` to `project.pbxproj` (XCRemoteSwiftPackageReference) | `—` |
+| DB files in Xcode | `en_words.db`, `en_examples.db`, `en_questions.db` copied to `Resources/` — auto-included via `PBXFileSystemSynchronizedRootGroup` | `—` |
+| WordRecord.swift | SQLite row → Swift struct; `Pronunciation`, `Meaning`, `WordDefinition` nested types; `toCardModel()` bridge to `TTUIWordCardModel` | `—` |
+| ExampleRecord.swift | `ExampleLine` (speaker/text) + `ExampleRecord` | `—` |
+| QuestionRecord.swift | `QuestionType` enum (fill_in_blank/definition/scenario), `QuestionDifficulty` enum (easy/medium/hard, Comparable) | `—` |
+| DatabaseService.swift | Singleton; opens all 3 DBs read-only from bundle; `fetchWords`, `fetchWord`, `fetchWords(difficulty:)`, `fetchWords(tag:)`, `fetchExamples`, `fetchQuestions`; no throws to UI | `—` |
+| WordCardViewModel.swift | `@Observable`; `loadWords()`, `nextWord()`, `previousWord()`; auto-prefetch next page at -20 | `—` |
+| Extensions.swift | `Collection[safe:]` subscript | `—` |
+| ContentView.swift | Replaced placeholder with real main screen: top bar + TTUIWordCard (swipe up/down) + TTUICardActionBar + TTUITabBar | `—` |
 
 ---
 
 ## In Progress
 
-_Nothing in progress._
+- [ ] Open project in Xcode to resolve SQLite.swift package (first build after SPM add)
 
 ---
 
@@ -63,12 +72,12 @@ _Nothing in progress._
 - [ ] Add all 3 DB files to Xcode project resources
 
 ### Phase 2 — Core Features
-- [ ] DatabaseService (opens en_words.db, en_examples.db, en_questions.db; joins in Swift)
-- [ ] Word model bridging SQLite → TTUIWordCardModel
+- [x] DatabaseService (opens en_words.db, en_examples.db, en_questions.db; joins in Swift)
+- [x] Word model bridging SQLite → TTUIWordCardModel
 - [ ] Category/deck selection screen
-- [ ] Main screen: TTUIWordCard + swipe navigation (up/down)
+- [x] Main screen: TTUIWordCard + swipe navigation (up/down)
 - [ ] TTS integration (AVSpeechSynthesizer)
-- [ ] Basic navigation (ContentView → TTUITabBar)
+- [x] Basic navigation (ContentView → TTUITabBar)
 
 ### Phase 3 — Learning Features
 - [ ] SwiftData setup (WordInteraction, QuestionAttempt, StudySession)
@@ -127,7 +136,7 @@ _Nothing in progress._
 └── twobythreewords/        ✅ Xcode project
     └── twobythreewords/
         ├── twobythreewordsApp.swift    ✅ App entry point
-        ├── ContentView.swift           🔄 Default placeholder (not yet wired)
+        ├── ContentView.swift           ✅ Main screen wired (card + swipe + action bar + tab bar)
         ├── Assets.xcassets/            ✅ 14 TTUI color sets + AppIcon
         └── TTUI/                       ✅ Design system
             ├── TTUI.swift              ✅ Index/docs
@@ -137,6 +146,11 @@ _Nothing in progress._
             │   ├── Buttons/            ✅ CardActionButton + CardActionBar
             │   └── Navigation/         ✅ TabBar
             └── Modifiers/              ✅ TTUIFlipEffect
+        ├── Models/                     ✅ WordRecord, ExampleRecord, QuestionRecord
+        ├── Services/                   ✅ DatabaseService
+        ├── ViewModels/                 ✅ WordCardViewModel
+        ├── Utilities/                  ✅ Extensions (safe subscript)
+        └── Resources/                  ✅ en_words.db, en_examples.db, en_questions.db
 ```
 
 Legend: ✅ Complete · 🔄 In progress / placeholder · ❌ Not started
@@ -151,8 +165,8 @@ _None currently._
 
 ## Notes for PM
 
-- **ContentView.swift** is the default Xcode template — not yet wired to TTUI. Phase 2 will replace it.
-- **TTUI files are not yet added to the Xcode project navigator** — they live on disk but the `.xcodeproj` file doesn't reference them (no group entries). Must be added manually in Xcode (drag folder into project navigator, "Create groups") before they compile. Build currently succeeds because Xcode's default "compile all Swift files in the target directory" setting picks them up — but for correctness they should be formally added.
+- **Phase 2 core wiring is done.** ContentView now shows real words from the database via swipe navigation. Before building, open the project in Xcode once to resolve the `SQLite.swift 0.15.3` SPM package (Xcode will fetch it from GitHub automatically on first open).
+- **DB files** are in `Resources/` inside the Xcode project — `PBXFileSystemSynchronizedRootGroup` picks them up automatically, no manual Xcode drag-drop needed.
+- **Still missing from Phase 2:** TTS (AVSpeechSynthesizer), category/deck selection screen. PM to confirm priority.
 - **Widget target** (Phase 6) is the natural trigger to extract TTUI into a local Swift Package. Full migration path documented in CLAUDE.md.
-- **DB file** (`.db`) is gitignored in the private repo. DB files live here (`2by3Words-db/`) and are distributed via GitHub Releases.
-- **CLAUDE.md updated to v1.5** with 3-DB architecture (`en_words.db`, `en_examples.db`, `en_questions.db`). Migration script (`migrate_to_split_db.py`) is ready. **PM should verify script output before proceeding to Phase 2 app integration.**
+- **CLAUDE.md** is now synced to this public repo — PM can read full architecture here.

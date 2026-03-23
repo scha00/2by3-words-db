@@ -227,6 +227,18 @@ VStack {
 - Card tap → flip (handled inside `TTUIWordCard`)
 - `WordCardViewModel` instantiated as `@State` in ContentView; injected into card via binding
 
+#### Design Fix Sprint — Round 2 (post Phase 2 review)
+
+| File | Change |
+|------|--------|
+| `TTUIRadius.swift` | `card` radius: 20 → 8pt |
+| `TTUISize.swift` | `cardWidth`: 0.88 → 1.0 (full screen width) |
+| `TTUIWordCard.swift` | Bookmarked background: `#DDEEFF` → deep blue `#1a4fa0`; back face also deep blue when bookmarked; removed all `.shadow` and border `.overlay`; added `.onChange(of: model.word)` to reset flip on word change |
+| `TTUIWordCardFront.swift` | Adaptive text colors when `model.isBookmarked`: word/definition → white, phonetic → white 0.8, partOfSpeech → white 0.7, divider → white 0.2; `TTUIDifficultyIndicator` now accepts `isBookmarked` — filled dots → white, unfilled → white 0.3 |
+| `TTUIWordCardBack.swift` | Adaptive colors: all text white, example accent bar → white 0.3, stats → white 0.6, divider → white 0.2 when bookmarked |
+| `TTUICardActionButton.swift` | `TTUICardActionBar`: removed background (`#D6D2C8`) and `clipShape`; now purely floating icons. Bookmark active color: `TTUIColor.accent` → `#378ADD` |
+| `ContentView.swift` | Card width = full screen width; card height = width × 1.5 (2:3 ratio); removed shadow from card container; physical 3-card drag replaces instant-jump gesture — prev/curr/next rendered simultaneously, offset by `±cardHeight + dragOffset`; 40% threshold → spring snap (response 0.3, damping 0.8); simultaneous `nextWord()` + `dragOffset = 0` in same render pass avoids visual jump; action bar has `.padding(.top, 16)`, no container |
+
 ---
 
 ### CLAUDE.md History

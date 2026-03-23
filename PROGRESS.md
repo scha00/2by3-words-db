@@ -1,6 +1,6 @@
 # 2by3 Words — Progress Tracker
 
-**Last updated:** 2026-03-22
+**Last updated:** 2026-03-22 (meanings v2 migration)
 **Branch:** `main`
 **Build status:** 🔄 Needs Xcode open to resolve SQLite.swift SPM package
 
@@ -13,7 +13,7 @@
 | Phase 0 | Xcode project setup | ✅ Done |
 | Phase 0 | TTUI design system | ✅ Done |
 | Phase 1 | Data collection & vocabulary DB | ❌ Not started |
-| Phase 2 | Core features (card UI, TTS, navigation) | 🔄 In progress |
+| Phase 2 | Core features (card UI, TTS, navigation) | 🔍 Awaiting review |
 | Phase 3 | Learning features (spaced repetition, decks) | ❌ Not started |
 | Phase 4 | Test features (quiz modes) | ❌ Not started |
 | Phase 5 | Monetization (AdMob, StoreKit 2) | ❌ Not started |
@@ -50,12 +50,14 @@
 | WordCardViewModel.swift | `@Observable`; `loadWords()`, `nextWord()`, `previousWord()`; auto-prefetch next page at -20 | `—` |
 | Extensions.swift | `Collection[safe:]` subscript | `—` |
 | ContentView.swift | Replaced placeholder with real main screen: top bar + TTUIWordCard (swipe up/down) + TTUICardActionBar + TTUITabBar | `—` |
+| Design fix sprint | Tags above card (green pills), 3-button action bar (icons only), bookmarked = blue card, colored difficulty dots, structured card back + stats row | `—` |
+| migrate_meanings_v2.py | Mechanical meanings JSON → v2 structure (primaryPartOfSpeech, primarySummary, primaryPhonetic, showOnCard); 874/874 words migrated, 0 errors; `migrated_v2` column added to words table | `—` |
 
 ---
 
 ## In Progress
 
-- [ ] Open project in Xcode to resolve SQLite.swift package (first build after SPM add)
+🔍 **Awaiting design review** — Phase 2 complete. Take simulator screenshots (front / back / bookmarked) and share with PM for design + product review before Phase 3.
 
 ---
 
@@ -131,6 +133,8 @@
 │   ├── scripts/
 │   │   ├── collect_data.py
 │   │   ├── json_to_sqlite.py
+│   │   ├── migrate_to_split_db.py
+│   │   ├── migrate_meanings_v2.py  ✅
 │   │   └── analyze_quality.py
 │   ├── word-lists/
 │   └── output/             ❌ Empty

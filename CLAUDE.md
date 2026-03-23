@@ -8,6 +8,10 @@ You are the **Engineer** for the 2by3 Words iOS app. The PM is a separate Claude
 3. Flag blockers in `PROGRESS.md` under "Blockers" and "Notes for PM"
 4. Follow the project architecture defined below — don't invent new patterns
 
+## Git rules
+- **Never commit or push without explicit instruction.** Always wait for the user to say "커밋해" or "push해" before running any `git commit` or `git push` command.
+- Prepare changes (stage, write commit message draft if helpful), but stop there until told to proceed.
+
 ## PROGRESS.md update rules
 Update `PROGRESS.md` at the end of every session or after any meaningful change.
 
@@ -464,6 +468,13 @@ SQLite foreign keys don't work across separate DB files. `word_id` in examples a
 5. iCloud sync
 6. Image quiz (ImageCreator API — iPhone 15 Pro+)
 7. Real-time AI sentences (Foundation Models — iOS 26+)
+8. Voice answer mode (Speech framework + Foundation Models)
+   - User speaks the word's meaning aloud
+   - Speech framework converts voice → text (on-device)
+   - Foundation Models judges conceptual correctness vs actual definition
+   - Correct → next card + familiarity +0.2
+   - Incorrect → show correction + familiarity -0.2
+   - Fallback: feature hidden on non-Apple Intelligence devices
 
 ### Phase 7: Polish & Launch (Week 8)
 1. App icon & branding
@@ -472,6 +483,30 @@ SQLite foreign keys don't work across separate DB files. `word_id` in examples a
 4. App Store description
 5. TestFlight beta
 6. Submit to App Store
+
+---
+
+## Review Workflow
+
+Every phase follows this cycle before moving to the next:
+
+1. Claude Code implements the phase
+2. Sahn takes simulator screenshots
+3. **Design Review** — share screenshots with PM (Claude.ai) to check:
+   - Layout, spacing, typography
+   - Dark mode
+   - Edge cases (long words, missing data)
+4. **Product Review** — PM checks:
+   - Feature completeness vs spec
+   - Philosophy alignment (simple, offline-first, no over-engineering)
+   - UX flow
+5. **Fix sprint** — PM writes fix prompts → Claude Code implements
+6. **Sign-off** → next phase begins
+
+### For Claude Code
+- At the end of each phase, add `🔍 Awaiting review` status to PROGRESS.md
+- Do not start the next phase until PROGRESS.md shows `✅ Review passed`
+- PM will update PROGRESS.md with review notes and sign-off
 
 ---
 
@@ -799,8 +834,8 @@ __pycache__/
 
 ---
 
-*Last Updated: 2026-03-16*
-*Version: 1.5*
+*Last Updated: 2026-03-22*
+*Version: 1.6*
 
 ---
 

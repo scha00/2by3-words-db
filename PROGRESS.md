@@ -38,6 +38,7 @@
 | TTUITabBar | Custom tab bar with blur material, haptic, SF Symbol fill states | `4104514` |
 | CLAUDE.md v1.3 | Added UI design decisions section, engineer role prompt | `4104514` |
 | CLAUDE.md v1.5 | DB architecture refactored to 3-file split (en_words, en_examples, en_questions) | `—` |
+| CLAUDE.md v1.6 | Added Review Workflow section; Voice Answer Mode to Phase 6; Git rules (no auto-commit) | `—` |
 | migrate_to_split_db.py | Migrates single english_vocabulary.db → en_words.db + en_examples.db + en_questions.db | `f24e25e` |
 | DB migration run | 874 words / 1584 examples / 1584 questions / 0 warnings; all 3 files in `2by3Words-db/` | `49d14ba` |
 | SQLite.swift SPM | Added `SQLite.swift 0.15.3` to `project.pbxproj` (XCRemoteSwiftPackageReference) | `—` |

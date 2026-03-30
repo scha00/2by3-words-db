@@ -267,6 +267,20 @@ VStack {
 - Card tap → flip (handled inside `TTUIWordCard`)
 - `WordCardViewModel` instantiated as `@State` in ContentView; injected into card via binding
 
+#### TTSService (`Services/TTSService.swift`)
+
+| Item | Details |
+|------|---------|
+| `TTSSpeaker` enum | `.word` / `.personA` / `.personB` |
+| `TTSService.shared` | `@Observable` singleton (NSObject subclass for delegate) |
+| Public API | `speak(text:)`, `speak(text:speaker:)`, `speakConversation(_:)`, `stop()`, `isSpeaking: Bool` |
+| Voice randomization | Per `speakConversation()` call: randomly pick en-US or en-GB pool, randomly assign gender to A vs B; Siri compact voices with en-US fallback if not installed |
+| Queue strategy | AVSpeechSynthesizer native queue — no `DispatchQueue.asyncAfter`; delegate callbacks update `isSpeaking` |
+| AI path | Stubbed with TODO — Foundation Models framework is text-generation only in current SDK, no public TTS API yet; AVSpeechSynthesizer fallback fully working |
+| `isSpeaking` | Flips true on `didStart`, false on `didFinish` (only when queue is fully drained) + `didCancel` |
+
+---
+
 #### UX Fix — Full-screen swipe (`aa040d5`)
 
 | File | Change |
@@ -336,7 +350,7 @@ VStack {
 - [x] WordCardViewModel (`@Observable`, paginated, auto-prefetch)
 - [x] ContentView: top bar + tag pills + card + action bar + tab bar
 - [x] Swipe up/down navigation (DragGesture, 50pt threshold)
-- [ ] TTS integration (AVSpeechSynthesizer) — pronunciation on 🔊 tap
+- [x] TTS foundation — `TTSService` built (voice randomization, conversation queue, AI stub)
 - [ ] Category/deck selection screen
 
 ### Phase 3 — Learning Features
@@ -415,7 +429,7 @@ VStack {
         ├── Models/                  ✅ WordRecord, ExampleRecord, QuestionRecord
         │   └── UserData/            ✅ WordInteraction, QuestionAttempt, StudySession (SwiftData)
         ├── ViewModels/              ✅ WordCardViewModel
-        ├── Services/                ✅ DatabaseService
+        ├── Services/                ✅ DatabaseService, TTSService
         ├── Utilities/               ✅ Extensions (Collection[safe:])
         └── Resources/               ✅ en_words.db, en_examples.db, en_questions.db
 
@@ -441,6 +455,7 @@ Legend: ✅ Complete · 🔄 In progress / partial · ❌ Not started
 
 ## Notes for PM
 
+- **TTSService foundation built.** Voice randomization per conversation. AI path stubbed; AVSpeechSynthesizer fallback fully working. No UI wired yet — 🔊 button wiring is next task.
 - **Phase 3-1 done.** Bookmark persists. View count tracked. Card back stats wired to real SwiftData. Familiarity adjustment deferred to Phase 3-2.
 - **correct% will show 0%** until Phase 4 quiz is implemented and writes `QuestionAttempt` records — this is expected.
 - **Phase 2 core wiring is done.** Real words from `en_words.db` are loading and displaying in the card via swipe navigation. `WordRecord.toCardModel()` bridges the DB layer to the TTUI design system cleanly.

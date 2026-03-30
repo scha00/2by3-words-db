@@ -1,6 +1,6 @@
 # 2by3 Words — Progress Tracker
 
-**Last updated:** 2026-03-22
+**Last updated:** 2026-03-29
 **Branch:** `main`
 **Build status:** 🔄 Needs Xcode open once to resolve SQLite.swift SPM package (auto-fetched from GitHub)
 
@@ -13,8 +13,9 @@
 | Phase 0 | Xcode project setup | ✅ Done |
 | Phase 0 | TTUI design system | ✅ Done |
 | Phase 1 | Data collection & vocabulary DB | 🔄 Test data only (874 words); full scrape pending |
-| Phase 2 | Core app connection (DB → card UI) | 🔍 Awaiting design review |
-| Phase 3 | Learning features (spaced repetition, decks) | ❌ Not started |
+| Phase 2 | Core app connection (DB → card UI) | ✅ Done |
+| Phase 3-1 | SwiftData setup (models, bookmark, view tracking) | 🔍 Awaiting review |
+| Phase 3 | Learning features (spaced repetition, decks) | 🔄 In progress |
 | Phase 4 | Test features (quiz modes) | ❌ Not started |
 | Phase 5 | Monetization (AdMob, StoreKit 2) | ❌ Not started |
 | Phase 6 | Premium + Apple Intelligence | ❌ Not started |
@@ -68,6 +69,45 @@ All components live in `twobythreewords/TTUI/`. Every file includes an Xcode Pre
 #### Tags display (above card, outside TTUI component)
 
 Tags (e.g. `SAT`, `GRE`) are rendered as pill badges **above** the card in `ContentView`, not inside `TTUIWordCardFront`. Style: green background `#EAF3DE`, green text `#3B6D11`, 11pt 500-weight. Hidden when word has no tags.
+
+---
+
+### Phase 3-1 — SwiftData Setup
+
+#### SwiftData Models (`Models/UserData/`)
+
+| File | Contents |
+|------|----------|
+| `WordInteraction.swift` | `@Model`: wordId, isBookmarked, familiarity (0.5 default), viewCount, lastSeenAt, needsReview, nextReviewDate |
+| `QuestionAttempt.swift` | `@Model`: questionId, wordId, answeredAt, isCorrect, selectedAnswer |
+| `StudySession.swift` | `@Model`: startedAt, endedAt, category, wordsSeenCount |
+
+#### ModelContainer (`twobythreewordsApp.swift`)
+
+`.modelContainer(for: [WordInteraction.self, QuestionAttempt.self, StudySession.self])` added to WindowGroup.
+
+#### WordCardViewModel updates
+
+| Change | Notes |
+|--------|-------|
+| `var modelContext: ModelContext?` | Injected from ContentView on `.onAppear` |
+| `interactionFor(wordId:)` | Fetch from SwiftData with in-session cache |
+| `getOrCreate(wordId:)` | Fetch or insert new `WordInteraction` |
+| `toggleBookmark(wordId:)` | Flips `isBookmarked` in SwiftData — persists across restarts |
+| `recordView(wordId:)` | Increments `viewCount`, sets `lastSeenAt` — called on every card navigation |
+| `viewCount(for:)`, `correctPct(for:)`, `familiarity(for:)` | Stats accessors used by ContentView |
+
+`correctPct` queries `QuestionAttempt` records — returns 0% until Phase 4 writes quiz results.
+
+#### ContentView changes
+
+- `@Environment(\.modelContext)` injected; assigned to `viewModel.modelContext` on `.onAppear`
+- Current card `TTUIWordCard` receives real `viewCount`, `correctPct`, `familiarity` from viewModel
+
+#### TTUIWordCard / TTUIWordCardBack changes
+
+- `TTUIWordCard`: added `viewCount`, `correctPct`, `familiarity` params (defaults 0/0/0.5)
+- `TTUIWordCardBack`: init now accepts stats params instead of hardcoded defaults
 
 ---
 
@@ -253,9 +293,14 @@ VStack {
 
 ## In Progress
 
-🔍 **Awaiting design review** — Phase 2 complete.
+🔍 **Awaiting review** — Phase 3-1 complete.
 
-**Next step:** Sahn takes simulator screenshots (front / back / bookmarked state) and shares with PM (Claude.ai) for design + product review. PM signs off → Phase 3 begins.
+**What was implemented (Phase 3-1):**
+- `WordInteraction`, `QuestionAttempt`, `StudySession` SwiftData models created in `Models/UserData/`
+- `ModelContainer` wired into `twobythreewordsApp.swift`
+- `WordCardViewModel` updated: injects `ModelContext`, fetch-or-create `WordInteraction`, `toggleBookmark()` persists across restarts, `recordView()` increments view count + sets `lastSeenAt`
+- Card back stats row now shows real SwiftData values: `viewCount`, `correctPct` (from `QuestionAttempt` queries, 0% until Phase 4 quiz), `familiarity` (0.5 for all words until Phase 3-2)
+- In-session cache in VM avoids redundant SwiftData fetches on every render
 
 **Still missing from Phase 2 (low priority — PM to confirm):**
 - TTS (AVSpeechSynthesizer) — pronunciation audio on card
@@ -287,9 +332,11 @@ VStack {
 - [ ] Category/deck selection screen
 
 ### Phase 3 — Learning Features
-- [ ] SwiftData setup: `WordInteraction`, `QuestionAttempt`, `StudySession` models
+- [x] SwiftData setup: `WordInteraction`, `QuestionAttempt`, `StudySession` models
+- [x] Wire real stats into card back stats row (views, correct%, familiarity)
+- [x] Bookmark toggle persists across app restarts
+- [x] View count tracked per word
 - [ ] Implicit familiarity tracking: swipe timing (<1s → +0.1, 5s+ → -0.1), example tap (-0.15)
-- [ ] Wire real stats into card back stats row (views, correct%, familiarity)
 - [ ] Deck system: `Deck` + `DeckFilter` SwiftData models
 - [ ] Spaced repetition algorithm (familiarity score + nextReviewDate)
 - [ ] Statistics view
@@ -358,6 +405,7 @@ VStack {
         │   │   └── Navigation/      ✅ TTUITabBar
         │   └── Modifiers/           ✅ TTUIFlipEffect (AnimatableModifier)
         ├── Models/                  ✅ WordRecord, ExampleRecord, QuestionRecord
+        │   └── UserData/            ✅ WordInteraction, QuestionAttempt, StudySession (SwiftData)
         ├── ViewModels/              ✅ WordCardViewModel
         ├── Services/                ✅ DatabaseService
         ├── Utilities/               ✅ Extensions (Collection[safe:])
@@ -379,16 +427,16 @@ Legend: ✅ Complete · 🔄 In progress / partial · ❌ Not started
 
 - **SQLite.swift iOS/tvOS 11 deprecation warnings** — appear in SPM package source, not our code. Harmless. Will resolve when SQLite.swift releases a version dropping iOS 11 availability checks.
 - **meanings v2 `primarySummary` is rough** — mechanical truncation of first definition to 8 words. Fine for test data; will be AI-curated in real data scrape (Phase 1).
-- **Card back stats row shows placeholder values** (0 views, 0% correct, 0.5 familiarity) — SwiftData not wired yet. Will be real data in Phase 3.
-- **Bookmark state is in-memory only** — resets on app restart. SwiftData persistence in Phase 3.
+- **Card back correct% always 0%** until Phase 4 quiz writes `QuestionAttempt` records.
 
 ---
 
 ## Notes for PM
 
+- **Phase 3-1 done.** Bookmark persists. View count tracked. Card back stats wired to real SwiftData. Familiarity adjustment deferred to Phase 3-2.
+- **correct% will show 0%** until Phase 4 quiz is implemented and writes `QuestionAttempt` records — this is expected.
 - **Phase 2 core wiring is done.** Real words from `en_words.db` are loading and displaying in the card via swipe navigation. `WordRecord.toCardModel()` bridges the DB layer to the TTUI design system cleanly.
 - **Build requirement:** Open project in Xcode once before building — Xcode will auto-fetch `SQLite.swift 0.15.3` from GitHub via SPM.
 - **meanings JSON is now v2.** The `primaryPartOfSpeech`, `primarySummary`, `primaryPhonetic`, and `showOnCard` fields are populated on all 874 words. The card back uses `showOnCard=true` to pick which definitions to display. This was a mechanical transform — AI curation happens during Phase 1 real data scrape.
 - **CLAUDE.md v1.6** is synced to this public repo. PM can read full architecture at `https://raw.githubusercontent.com/scha00/2by3-words-db/main/CLAUDE.md`.
 - **Still missing from Phase 2 before full sign-off:** TTS (🔊 button on card), category/deck selection screen. PM to confirm if these block Phase 3 or can be deferred.
-- **Phase 3 trigger:** SwiftData setup is the first thing in Phase 3. Once `WordInteraction` is wired, the card back stats row and bookmark persistence both become real automatically.

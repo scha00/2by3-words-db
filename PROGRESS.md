@@ -351,6 +351,7 @@ VStack {
 - [x] ContentView: top bar + tag pills + card + action bar + tab bar
 - [x] Swipe up/down navigation (DragGesture, 50pt threshold)
 - [x] TTS foundation — `TTSService` built (voice randomization, conversation queue, AI stub)
+- [x] 🔊 word pronunciation wired to TTSService (`TTUIWordCardFront`)
 - [ ] Category/deck selection screen
 
 ### Phase 3 — Learning Features
@@ -455,7 +456,8 @@ Legend: ✅ Complete · 🔄 In progress / partial · ❌ Not started
 
 ## Notes for PM
 
-- **TTSService foundation built.** Voice randomization per conversation. AI path stubbed; AVSpeechSynthesizer fallback fully working. No UI wired yet — 🔊 button wiring is next task.
+- **🔊 word pronunciation wired.** `TTUIWordCardFront` button calls `TTSService.shared.speak/stop` directly. Icon switches `speaker.wave.2` ↔ `speaker.wave.3.fill` via `isSpeaking`. `onPlayPronunciation` closure removed (no longer needed).
+- **TTSService foundation built.** Voice randomization per conversation. AI path stubbed; AVSpeechSynthesizer fallback fully working.
 - **Phase 3-1 done.** Bookmark persists. View count tracked. Card back stats wired to real SwiftData. Familiarity adjustment deferred to Phase 3-2.
 - **correct% will show 0%** until Phase 4 quiz is implemented and writes `QuestionAttempt` records — this is expected.
 - **Phase 2 core wiring is done.** Real words from `en_words.db` are loading and displaying in the card via swipe navigation. `WordRecord.toCardModel()` bridges the DB layer to the TTUI design system cleanly.

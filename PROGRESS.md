@@ -267,6 +267,14 @@ VStack {
 - Card tap → flip (handled inside `TTUIWordCard`)
 - `WordCardViewModel` instantiated as `@State` in ContentView; injected into card via binding
 
+#### UX Fix — Full-screen swipe (`aa040d5`)
+
+| File | Change |
+|------|--------|
+| `ContentView.swift` | `@State var cardSpacing` added to capture zone height; `.gesture` removed from zone `GeometryReader`; `.simultaneousGesture` attached to outer `ZStack` so entire screen (top bar, action bar, tab bar area) responds to swipe; button taps unaffected |
+
+---
+
 #### Design Fix Sprint — Round 2 (post Phase 2 review)
 
 | File | Change |

@@ -1,6 +1,6 @@
 # 2by3 Words — Progress Tracker
 
-**Last updated:** 2026-03-29
+**Last updated:** 2026-05-23
 **Branch:** `main`
 **Build status:** 🔄 Needs Xcode open once to resolve SQLite.swift SPM package (auto-fetched from GitHub)
 
@@ -301,6 +301,14 @@ VStack {
 | `TTUICardActionButton.swift` | `TTUICardActionBar`: removed background (`#D6D2C8`) and `clipShape`; now purely floating icons. Bookmark active color: `TTUIColor.accent` → `#378ADD` |
 | `ContentView.swift` | Card width = full screen width; card height = width × 1.5 (2:3 ratio); removed shadow from card container; physical 3-card drag replaces instant-jump gesture — prev/curr/next rendered simultaneously, offset by `±cardHeight + dragOffset`; 40% threshold → spring snap (response 0.3, damping 0.8); simultaneous `nextWord()` + `dragOffset = 0` in same render pass avoids visual jump; action bar has `.padding(.top, 16)`, no container |
 
+#### Card Front Redesign (2026-05-23)
+
+| File | Change |
+|------|--------|
+| `TTUIWordCardFront.swift` | Word font → New York serif 36pt; difficulty dots removed; short definition + mask/blur/reveal removed; part-of-speech label removed; divider removed; tag pills moved inside card (top-left, 16pt padding); content left-aligned; `isMasked` param removed |
+| `TTUIWordCard.swift` | `isMasked` property and init param removed; "Front - Masked" preview removed |
+| `ContentView.swift` | Tag pills block above card removed; `isMasked` state removed; `TTUICardActionBar` removed; mini button row (grid/detail/bookmark, 36pt circle, `systemGray6` bg, 14pt icons) added as `.overlay(alignment: .topTrailing)` on drag zone |
+
 ---
 
 ### CLAUDE.md History
@@ -315,7 +323,7 @@ VStack {
 
 ## In Progress
 
-🔍 **Awaiting review** — Phase 3-1 complete.
+🔍 **Awaiting review** — Phase 3-1 + card front redesign complete.
 
 **What was implemented (Phase 3-1):**
 - `WordInteraction`, `QuestionAttempt`, `StudySession` SwiftData models created in `Models/UserData/`
@@ -456,6 +464,7 @@ Legend: ✅ Complete · 🔄 In progress / partial · ❌ Not started
 
 ## Notes for PM
 
+- **Card front redesigned (2026-05-23, committed).** Word font → New York serif 36pt. Difficulty dots, short definition, mask/blur, divider, part-of-speech removed from front. Tag pills moved inside card (top-left). Mini button row (grid/detail/bookmark) replaces `TTUICardActionBar` as floating overlay in ContentView. `isMasked` state fully removed.
 - **🔊 word pronunciation wired.** `TTUIWordCardFront` button calls `TTSService.shared.speak/stop` directly. Icon switches `speaker.wave.2` ↔ `speaker.wave.3.fill` via `isSpeaking`. `onPlayPronunciation` closure removed (no longer needed).
 - **TTSService foundation built.** Voice randomization per conversation. AI path stubbed; AVSpeechSynthesizer fallback fully working.
 - **Phase 3-1 done.** Bookmark persists. View count tracked. Card back stats wired to real SwiftData. Familiarity adjustment deferred to Phase 3-2.

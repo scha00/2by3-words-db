@@ -1,6 +1,6 @@
 # 2by3 Words — Progress Tracker
 
-**Last updated:** 2026-05-23
+**Last updated:** 2026-05-23 (Phase 3-1a)
 **Branch:** `main`
 **Build status:** 🔄 Needs Xcode open once to resolve SQLite.swift SPM package (auto-fetched from GitHub)
 
@@ -15,6 +15,7 @@
 | Phase 1 | Data collection & vocabulary DB | 🔄 Test data only (874 words); full scrape pending |
 | Phase 2 | Core app connection (DB → card UI) | ✅ Done |
 | Phase 3-1 | SwiftData setup (models, bookmark, view tracking) | 🔍 Awaiting review |
+| Phase 3-1a | Tile View (word grid, pinch-to-open, jump-to-word) | 🔍 Awaiting review |
 | Phase 3 | Learning features (spaced repetition, decks) | 🔄 In progress |
 | Phase 4 | Test features (quiz modes) | ❌ Not started |
 | Phase 5 | Monetization (AdMob, StoreKit 2) | ❌ Not started |
@@ -301,6 +302,19 @@ VStack {
 | `TTUICardActionButton.swift` | `TTUICardActionBar`: removed background (`#D6D2C8`) and `clipShape`; now purely floating icons. Bookmark active color: `TTUIColor.accent` → `#378ADD` |
 | `ContentView.swift` | Card width = full screen width; card height = width × 1.5 (2:3 ratio); removed shadow from card container; physical 3-card drag replaces instant-jump gesture — prev/curr/next rendered simultaneously, offset by `±cardHeight + dragOffset`; 40% threshold → spring snap (response 0.3, damping 0.8); simultaneous `nextWord()` + `dragOffset = 0` in same render pass avoids visual jump; action bar has `.padding(.top, 16)`, no container |
 
+#### Phase 3-1a — Tile View (2026-05-23)
+
+| File | Change |
+|------|--------|
+| `Views/TileView/TileView.swift` | New file. `fullScreenCover` overlay with 4-column `LazyVGrid`. Top bar: deck name + word count (leading), disabled "Edit" (trailing). `TileCell`: 11pt word text, `#DDEEFF` bg when bookmarked, `cardFront` otherwise, 6pt corner radius. Tap tile → `onSelectIndex(index)` + dismiss. Pinch-out (scale > 1.3) → dismiss. `hasDismissed` guard prevents double-fire. |
+| `ContentView.swift` | `@State var showTileView`, `@Namespace var cardNamespace` added. Current `TTUIWordCard` tagged `.matchedGeometryEffect(id: "card-\(word.id)", in: cardNamespace)` (after `.frame`). `square.grid.2x2` mini button wired to `showTileView = true`. `.simultaneousGesture(MagnificationGesture)` — pinch-in scale < 0.85 → opens tile view. `.fullScreenCover` presents `TileView` with words/deckName/isBookmarked closure/onSelectIndex. |
+| `WordCardViewModel.swift` | `var deckDisplayName: String { "All words" }` added. `func jumpTo(index:)` added — bounds-checked index set + `recordView`. |
+| `TTUICardActionButton.swift` | `TTUICardAction.detail` icon changed from `book.closed` → `square.grid.2x2`. |
+
+**matchedGeometryEffect limitation:** `matchedGeometryEffect` namespace does NOT cross `fullScreenCover` boundaries — fullScreenCover renders in a separate `UIWindow`, so SwiftUI cannot reconcile source (ContentView card) and destination (TileCell) geometry. The annotation is in place per spec; animation silently falls back to default fullScreenCover slide. To enable true matched geometry, TileView would need to be a ZStack overlay in the same view hierarchy. Flagged for PM review.
+
+---
+
 #### Card Front Redesign (2026-05-23)
 
 | File | Change |
@@ -367,6 +381,7 @@ VStack {
 - [x] Wire real stats into card back stats row (views, correct%, familiarity)
 - [x] Bookmark toggle persists across app restarts
 - [x] View count tracked per word
+- [x] Tile View — 4-col word grid, pinch-open/close, tap-to-jump (`Views/TileView/TileView.swift`)
 - [ ] Implicit familiarity tracking: swipe timing (<1s → +0.1, 5s+ → -0.1), example tap (-0.15)
 - [ ] Deck system: `Deck` + `DeckFilter` SwiftData models
 - [ ] Spaced repetition algorithm (familiarity score + nextReviewDate)
@@ -435,6 +450,8 @@ VStack {
         │   │   ├── Buttons/         ✅ TTUICardActionButton, TTUICardActionBar (3 buttons: Detail/Dialogue/Bookmark)
         │   │   └── Navigation/      ✅ TTUITabBar
         │   └── Modifiers/           ✅ TTUIFlipEffect (AnimatableModifier)
+        ├── Views/                   ✅
+        │   └── TileView/            ✅ TileView (4-col grid, pinch-open, tap-to-jump)
         ├── Models/                  ✅ WordRecord, ExampleRecord, QuestionRecord
         │   └── UserData/            ✅ WordInteraction, QuestionAttempt, StudySession (SwiftData)
         ├── ViewModels/              ✅ WordCardViewModel
@@ -464,6 +481,8 @@ Legend: ✅ Complete · 🔄 In progress / partial · ❌ Not started
 
 ## Notes for PM
 
+- **Phase 3-1a done (2026-05-23).** `TileView` built — 4-col word grid, pinch-open/close, tap-to-jump. `square.grid.2x2` button wired. `deckDisplayName` + `jumpTo()` in VM. matchedGeometryEffect annotated (limitation documented below).
+- **matchedGeometryEffect limitation.** Namespace does NOT bridge `fullScreenCover` — SwiftUI renders the cover in a separate `UIWindow`, so the source (ContentView card) and destination (TileCell) cannot be reconciled. Both are annotated per spec; animation falls back to default cover slide. If the PM wants true matched-geometry zoom, the fix is to replace `fullScreenCover` with a `ZStack` overlay at the ContentView level — everything stays in one view hierarchy. Awaiting PM decision.
 - **Card front redesigned (2026-05-23, committed).** Word font → New York serif 36pt. Difficulty dots, short definition, mask/blur, divider, part-of-speech removed from front. Tag pills moved inside card (top-left). Mini button row (grid/detail/bookmark) replaces `TTUICardActionBar` as floating overlay in ContentView. `isMasked` state fully removed.
 - **🔊 word pronunciation wired.** `TTUIWordCardFront` button calls `TTSService.shared.speak/stop` directly. Icon switches `speaker.wave.2` ↔ `speaker.wave.3.fill` via `isSpeaking`. `onPlayPronunciation` closure removed (no longer needed).
 - **TTSService foundation built.** Voice randomization per conversation. AI path stubbed; AVSpeechSynthesizer fallback fully working.

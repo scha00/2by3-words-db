@@ -1,6 +1,6 @@
 # 2by3 Words — Progress Tracker
 
-**Last updated:** 2026-05-23 (Phase 3-1a)
+**Last updated:** 2026-05-24 (session 4) (pinch rotation + flight fix)
 **Branch:** `main`
 **Build status:** 🔄 Needs Xcode open once to resolve SQLite.swift SPM package (auto-fetched from GitHub)
 
@@ -15,7 +15,7 @@
 | Phase 1 | Data collection & vocabulary DB | 🔄 Test data only (874 words); full scrape pending |
 | Phase 2 | Core app connection (DB → card UI) | ✅ Done |
 | Phase 3-1 | SwiftData setup (models, bookmark, view tracking) | 🔍 Awaiting review |
-| Phase 3-1a | Tile View (word grid, pinch-to-open, jump-to-word) | 🔍 Awaiting review |
+| Phase 3-1a | Tile View — interactive pinch transition (ZStack overlay, live progress) | 🔍 Awaiting review |
 | Phase 3 | Learning features (spaced repetition, decks) | 🔄 In progress |
 | Phase 4 | Test features (quiz modes) | ❌ Not started |
 | Phase 5 | Monetization (AdMob, StoreKit 2) | ❌ Not started |
@@ -302,16 +302,37 @@ VStack {
 | `TTUICardActionButton.swift` | `TTUICardActionBar`: removed background (`#D6D2C8`) and `clipShape`; now purely floating icons. Bookmark active color: `TTUIColor.accent` → `#378ADD` |
 | `ContentView.swift` | Card width = full screen width; card height = width × 1.5 (2:3 ratio); removed shadow from card container; physical 3-card drag replaces instant-jump gesture — prev/curr/next rendered simultaneously, offset by `±cardHeight + dragOffset`; 40% threshold → spring snap (response 0.3, damping 0.8); simultaneous `nextWord()` + `dragOffset = 0` in same render pass avoids visual jump; action bar has `.padding(.top, 16)`, no container |
 
-#### Phase 3-1a — Tile View (2026-05-23)
+#### Phase 3-1a — Tile View, Interactive Pinch Transition (2026-05-23)
 
 | File | Change |
 |------|--------|
-| `Views/TileView/TileView.swift` | New file. `fullScreenCover` overlay with 4-column `LazyVGrid`. Top bar: deck name + word count (leading), disabled "Edit" (trailing). `TileCell`: 11pt word text, `#DDEEFF` bg when bookmarked, `cardFront` otherwise, 6pt corner radius. Tap tile → `onSelectIndex(index)` + dismiss. Pinch-out (scale > 1.3) → dismiss. `hasDismissed` guard prevents double-fire. |
-| `ContentView.swift` | `@State var showTileView`, `@Namespace var cardNamespace` added. Current `TTUIWordCard` tagged `.matchedGeometryEffect(id: "card-\(word.id)", in: cardNamespace)` (after `.frame`). `square.grid.2x2` mini button wired to `showTileView = true`. `.simultaneousGesture(MagnificationGesture)` — pinch-in scale < 0.85 → opens tile view. `.fullScreenCover` presents `TileView` with words/deckName/isBookmarked closure/onSelectIndex. |
-| `WordCardViewModel.swift` | `var deckDisplayName: String { "All words" }` added. `func jumpTo(index:)` added — bounds-checked index set + `recordView`. |
-| `TTUICardActionButton.swift` | `TTUICardAction.detail` icon changed from `book.closed` → `square.grid.2x2`. |
+| `Views/TileView/TileView.swift` | Interface changed: `@Binding var pinchProgress`, `@Binding var showTileView` replace `@Environment(\.dismiss)` and `namespace: Namespace.ID`. Background fades via `TTUIColor.background.opacity(Double(pinchProgress))`. Top bar fades via `.opacity(pinchProgress)`. ScrollView scales via `.scaleEffect(0.85 + pinchProgress * 0.15)`. Individual tiles stagger via `staggerOpacity(index:)` — capped at `min(index, 49) * 0.002` delay so all tiles are fully visible at `pinchProgress = 1.0`. Tap tile: calls `onSelectIndex` + animates both bindings to close. Pinch-out (`> 1.3`): animates both bindings to close. |
+| `ContentView.swift` | `@Namespace` and `matchedGeometryEffect` removed. `@GestureState var pinchScale` + `@State var pinchProgress` added. Card: `.scaleEffect(1.0 - pinchProgress * 0.85)` + `.opacity(1.0 - pinchProgress * 0.3)` + `.allowsHitTesting(pinchProgress == 0)`. `pinchGesture` computed property: `.updating` + `.onChanged` maps scale 1.0→0.5 to progress 0→1, `.onEnded` snaps to open (< 0.7 threshold) or back. TileView placed as `ZStack` sibling (same view hierarchy) via `if pinchProgress > 0 \|\| showTileView`. `physicalDragGesture` guards `pinchProgress == 0`. `square.grid.2x2` button uses `withAnimation { pinchProgress = 1.0; showTileView = true }`. |
 
-**matchedGeometryEffect limitation:** `matchedGeometryEffect` namespace does NOT cross `fullScreenCover` boundaries — fullScreenCover renders in a separate `UIWindow`, so SwiftUI cannot reconcile source (ContentView card) and destination (TileCell) geometry. The annotation is in place per spec; animation silently falls back to default fullScreenCover slide. To enable true matched geometry, TileView would need to be a ZStack overlay in the same view hierarchy. Flagged for PM review.
+**Stagger animation notes:** Stagger works well for the first ~50 visible tiles (one screen). The delay is capped at `min(index, 49) * 0.002 = 0.098s` max — tiles 50+ all use the same delay and appear simultaneously. With LazyVGrid, off-screen tiles render only when scrolled to, by which time `pinchProgress = 1.0` and all are immediately opaque. The "gather" effect is subtle during a fast pinch (0.3–0.5s total) — feels natural, not jarring. May want to increase delay multiplier to `0.005` if the stagger feels too fast.
+
+---
+
+#### Phase 3-1a — TileView + Interactive Pinch Transition (2026-05-23)
+
+| File | Change |
+|------|--------|
+| `Views/TileView/TileView.swift` | New file. 4-column LazyVGrid tile browser. `TileFrameKey` PreferenceKey reports each tile's global frame. `currentIndex` tile renders as invisible placeholder while card is flying in. `ScrollViewReader` pre-scrolls to `currentIndex` on appear. Pinch-out (scale > 1.3) dismisses. Stagger opacity per tile. No scaleEffect (phase 2). |
+| `ContentView.swift` | `CardFrameKey` PreferenceKey captures card's natural frame. `cardIsFlying` + `currentTileFrame` + `cardNaturalFrame` state vars. Card stays fully opaque; only `scaleEffect` + `offset` change. TopBar + TabBar fade with `1.0 - pinchProgress`. Prev/next cards hidden during pinch. Pinch threshold 0.7 → card flies to tile via spring(0.35, 0.82); after 0.45s flight completes → `showTileView = true`. Button tap opens tile view directly (no fly, tile frame not yet loaded). |
+
+**Known limitation:** If `currentIndex` is far down the list (tile not in initial viewport), `currentTileFrame` may be `.zero` when the gesture ends — card would fly to screen origin. `ScrollViewReader.scrollTo` fires on `.onAppear` which should load the tile frame before the user can release the pinch, but not guaranteed on very first open. Will note for PM.
+
+#### Phase 3-1a — Pinch Scale + Pan + Rotation + flight fix (2026-05-24, sessions 3–4)
+
+Root causes identified and fixed:
+
+**Bug 2 root cause:** `currentTileFrame` was `.zero` at flight time because TileView was conditionally rendered (`if pinchProgress > 0`). On fast pinches, TileView hadn't yet rendered its first frame before the gesture ended → flight guard `currentTileFrame != .zero` failed → card stayed at center, then popped.
+
+**Bug 1 root cause:** `physicalDragGesture` uses `DragGesture(minimumDistance: 10)`. During a symmetric pinch the two-finger centroid barely moves, never reaching 10pt → gesture never fired → `livePanOffset` stayed `.zero` → no card pan.
+
+| File | Change |
+|------|--------|
+| `ContentView.swift` | **Bug 2 (flight origin):** TileView now always in view hierarchy (`.opacity(0.001)` not `if pinchProgress > 0`). LazyVGrid renders first ~40 tiles at start, `TileFrameKey` is populated before any pinch. `pinchGesture.onEnded`: `pinchProgress = 1.0` set WITHOUT animation (snap), only `cardIsFlying = true` uses `withAnimation` — animating `pinchProgress` was driving `cardFlyScale` toward 0.15 (center shrink) before `currentTileFrame` was non-zero. **Bug 1 pan:** Added `pinchPanGesture` — `DragGesture(minimumDistance: 0)` fires the instant two-finger centroid moves (old `minimumDistance: 10` never fired during symmetric pinch). **Bug 1 rotation:** Added `rotationGesture` — `RotationGesture` fires alongside `MagnificationGesture`. `@State var livePinchRotation: Angle` drives `.rotationEffect` on current card. Resets to `.zero` on cancel (animated) and on flight cleanup. Apple Photos-style: card follows scale + pan + rotation simultaneously during pinch. |
 
 ---
 
@@ -440,7 +461,7 @@ VStack {
 └── twobythreewords/                ✅ Xcode project
     └── twobythreewords/
         ├── twobythreewordsApp.swift ✅ @main entry point
-        ├── ContentView.swift        ✅ main screen (top bar + tags + card + action bar + tab bar)
+        ├── ContentView.swift        ✅ main screen + pinch-to-tile (CardFrameKey, cardIsFlying, chrome fade)
         ├── Assets.xcassets/         ✅ 14 TTUI color sets (light + dark) + AppIcon placeholder
         ├── TTUI/                    ✅ design system
         │   ├── TTUI.swift           ✅ index / usage docs
@@ -448,7 +469,7 @@ VStack {
         │   ├── Components/
         │   │   ├── Card/            ✅ TTUIWordCardModel, TTUIWordCardFront, TTUIWordCardBack, TTUIWordCard
         │   │   ├── Buttons/         ✅ TTUICardActionButton, TTUICardActionBar (3 buttons: Detail/Dialogue/Bookmark)
-        │   │   └── Navigation/      ✅ TTUITabBar
+        │   │   └── Navigation/      ❌ TTUITabBar (deprecated — 제거 예정)
         │   └── Modifiers/           ✅ TTUIFlipEffect (AnimatableModifier)
         ├── Views/                   ✅
         │   └── TileView/            ✅ TileView (4-col grid, pinch-open, tap-to-jump)
@@ -476,13 +497,16 @@ Legend: ✅ Complete · 🔄 In progress / partial · ❌ Not started
 - **SQLite.swift iOS/tvOS 11 deprecation warnings** — appear in SPM package source, not our code. Harmless. Will resolve when SQLite.swift releases a version dropping iOS 11 availability checks.
 - **meanings v2 `primarySummary` is rough** — mechanical truncation of first definition to 8 words. Fine for test data; will be AI-curated in real data scrape (Phase 1).
 - **Card back correct% always 0%** until Phase 4 quiz writes `QuestionAttempt` records.
+- **TileView tile frame may be zero on first pinch** — if `currentIndex` is far down the list and the user pinches before `ScrollViewReader.scrollTo` renders the tile. Card would animate toward screen origin. Low risk for typical first session (currentIndex starts at 0). May need a "wait for frame" guard in a future fix.
 
 ---
 
 ## Notes for PM
 
-- **Phase 3-1a done (2026-05-23).** `TileView` built — 4-col word grid, pinch-open/close, tap-to-jump. `square.grid.2x2` button wired. `deckDisplayName` + `jumpTo()` in VM. matchedGeometryEffect annotated (limitation documented below).
-- **matchedGeometryEffect limitation.** Namespace does NOT bridge `fullScreenCover` — SwiftUI renders the cover in a separate `UIWindow`, so the source (ContentView card) and destination (TileCell) cannot be reconciled. Both are annotated per spec; animation falls back to default cover slide. If the PM wants true matched-geometry zoom, the fix is to replace `fullScreenCover` with a `ZStack` overlay at the ContentView level — everything stays in one view hierarchy. Awaiting PM decision.
+- **UI 방향 전면 개편 확정 (2026-05-25).** 카드 넘기기: 수직 스와이프 → 좌우 `TabView.page`. 탭바 완전 제거. 하단 버튼: 북마크 + 디테일 2개만. 상단: 타일 버튼(좌) + ••• 메뉴(우). Test/Stats/Settings는 ••• 메뉴 안으로 이동. 카드 뒷면: Full 정의 → 4지선다 미니 퀴즈로 변경. 디테일 뷰: Photos 스타일 ScrollView 패널 (카드 상단, 디테일 내용 아래 스크롤). `TTUITabBar`, `TTUICardActionBar` deprecated. CLAUDE.md v1.7 반영 완료.
+- **Phase 3-1a pinch Scale+Pan+Rotation + flight fix (2026-05-24, sessions 3–4).** All three pinch bugs fixed: (1) Card follows two-finger pan via `pinchPanGesture` (`DragGesture(minimumDistance:0)`); (2) Card rotates with two fingers via `rotationGesture` (`RotationGesture`) + `.rotationEffect(livePinchRotation)` — Apple Photos-style Scale+Pan+Rotation simultaneously; (3) Card flies to correct tile — `pinchProgress = 1.0` is now a non-animated snap (was animated, driving `cardFlyScale` to 0.15 center-shrink before tile frame was known).
+- **Phase 3-1a fix (2026-05-23).** Replaced `fullScreenCover` + `matchedGeometryEffect` with interactive `ZStack` overlay driven by `pinchProgress: CGFloat`. Card shrinks live as user pinches; grid appears simultaneously; releasing past 0.7× threshold snaps to tile view, else snaps back. See detailed notes below.
+- **Phase 3-1a TileView + interactive pinch (2026-05-23).** `TileView.swift` created. Card-to-tile fly animation via `CardFrameKey` + `TileFrameKey`. Card stays opaque during pinch; chrome fades. `scaleEffect` removed from tile grid (opacity-only phase 2). Known limitation: tile frame may be `.zero` on very first pinch if `currentIndex` is off-screen (see Known Issues).
 - **Card front redesigned (2026-05-23, committed).** Word font → New York serif 36pt. Difficulty dots, short definition, mask/blur, divider, part-of-speech removed from front. Tag pills moved inside card (top-left). Mini button row (grid/detail/bookmark) replaces `TTUICardActionBar` as floating overlay in ContentView. `isMasked` state fully removed.
 - **🔊 word pronunciation wired.** `TTUIWordCardFront` button calls `TTSService.shared.speak/stop` directly. Icon switches `speaker.wave.2` ↔ `speaker.wave.3.fill` via `isSpeaking`. `onPlayPronunciation` closure removed (no longer needed).
 - **TTSService foundation built.** Voice randomization per conversation. AI path stubbed; AVSpeechSynthesizer fallback fully working.

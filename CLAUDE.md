@@ -834,8 +834,8 @@ __pycache__/
 
 ---
 
-*Last Updated: 2026-03-22*
-*Version: 1.6*
+*Last Updated: 2026-05-25*
+*Version: 1.7*
 
 ---
 
@@ -844,8 +844,8 @@ __pycache__/
 ### Onboarding Flow (3 screens)
 1. **Interactive Card Preview**
    - 실제 작동하는 단어 카드를 작게 보여줌 (북마크, 발음, 예시 탭 가능)
-   - 위아래 스와이프로 단어 넘기기 직접 체험
-   - 오른쪽 스와이프 → 다음 온보딩 화면
+   - 좌우 스와이프로 단어 넘기기 직접 체험
+   - 아래에서 위로 올리면 디테일 뷰 체험
    - 하단에 "No streaks. No guilt. Study when you need to." 문구
    - Page indicator (dot)
 
@@ -861,39 +861,32 @@ __pycache__/
 
 ### Main Screen Layout
 ```
-상단: [2by3 Words title]                    [iCloud sync icon]
-중간: TTUIWordCard (위아래 스와이프, 탭 플립)
-카드하단: TTUICardActionBar [Detail] [Dialogue] [Progress] [Bookmark]
-하단: TTUITabBar [Deck] [Test] [Stats] [Settings]
+상단: [⊞ 타일버튼]                         [••• 메뉴]
+중간: TTUIWordCard (좌우 스와이프 / 탭 플립 / 위 스와이프 → 디테일)
+하단: [🔖 북마크]                           [ℹ 디테일]
 ```
 
 ### Card Interaction
-- **위 스와이프**: 다음 단어
-- **아래 스와이프**: 이전 단어
+- **좌 스와이프**: 다음 단어
+- **우 스와이프**: 이전 단어
 - **탭**: 앞면 ↔ 뒷면 플립 (3D rotation)
-- **앞면**: 단어 + 발음기호(🔊) + 품사 + 대표뜻 (마스크 모드 지원)
-- **뒷면**: Full 정의 + 예시 문장
+- **위 스와이프**: 디테일 뷰 열기 (디테일 버튼과 동일 동작)
+- **앞면**: 단어 + 발음기호(🔊) + 품사 + 태그
+- **뒷면**: 4지선다 미니 퀴즈
 
-### Mask Mode
-- 앞면의 대표뜻을 blur 처리
-- 탭하면 reveal
-- 카드 상단에 eye.slash 토글로 전체 on/off
-
-### Card Action Buttons (카드 하단 4개)
+### Bottom Action Bar
 | 버튼 | 기능 |
 |------|------|
-| Detail | 사전형 풀 정의, 동의어/반의어 |
-| Dialogue | 대화 예시 + AI TTS 오디오 재생 |
-| Progress | 이 단어의 학습 성취도 (조회수, 테스트 정답률) |
-| Bookmark | 북마크 토글 |
+| 🔖 북마크 | 북마크 토글 |
+| ℹ 디테일 | 디테일 뷰 열기 (위 스와이프와 동일 동작) |
 
-### Profile Icon (상단 우측)
-- 탭 불가 (static display)
-- CloudKit 동기화 상태 표시
+### 상단 바
+- **좌측**: ⊞ 타일 버튼 → 타일 그리드 뷰 열기
+- **우측**: ••• 메뉴 버튼 → Test / Stats / Settings 접근
+- iCloud 동기화 상태는 ••• 메뉴 또는 Settings 안에서 표시
   - `icloud` → 동기화 완료
   - `icloud.slash` → iCloud 꺼짐
   - `arrow.triangle.2.circlepath.icloud` → 동기화 중
-- iCloud 없으면 로컬 저장으로 graceful fallback
 
 ### Data Sync Strategy
 ```swift
@@ -907,13 +900,26 @@ __pycache__/
 // 프리미엄: SQLite + CloudKit 동기화
 ```
 
-### Tab Bar Structure
-| 탭 | 내용 |
-|----|------|
-| Deck | 덱 스위처 + 단어 목록 + 북마크 + 덱 편집(프리미엄) |
-| Test | contextual examples 기반 객관식/빈칸 테스트 |
+### ••• 메뉴 구성
+탭바 없음. Test / Stats / Settings 는 상단 우측 ••• 버튼으로 접근.
+
+| 항목 | 기능 |
+|------|------|
+| Test | 퀴즈 모드 (fill-in-blank, 4지선다 등) |
 | Stats | 학습 통계, 진도, 복습 필요 단어 |
 | Settings | 레벨/목표 설정, 프리미엄, iCloud, 라이선스 |
+
+### Detail View (Photos 스타일)
+- **열기**: 위 스와이프 또는 하단 ℹ 디테일 버튼
+- **구조**: `ScrollView` 하나 — 카드가 상단에 고정, 디테일 내용이 카드 바로 아래 스크롤
+- **내용**: 모든 단어 뜻, 다른 품사/의미, 유의어/반의어, [Conversation 보기 →] 버튼
+- **닫기**: 아래로 당기면 카드 뷰로 돌아옴
+
+### Card Back — Mini Quiz
+- 4지선다: "이 단어의 뜻은?" (정답 1개 + 오답 3개)
+- 각 선택지: 정의 앞 6–8단어로 truncate (스크롤 없이 한 눈에)
+- 즉각 피드백: 정답 → 초록 / 오답 → 빨강
+- familiarity 자동 업데이트: 정답 +0.2 / 오답 −0.2
 
 ### Multi-Deck (프리미엄)
 - 기본: English 덱 1개
@@ -926,6 +932,7 @@ __pycache__/
 - **위치:** `twobythreewords/twobythreewords/TTUI/`
 - 모든 컴포넌트에 Xcode Preview 포함
 - **Foundation 토큰:** `TTUIColor`, `TTUISpacing`, `TTUITypography`, `TTUIRadius`, `TTUISize`, `TTUIAnimation`
-- **주요 컴포넌트:** `TTUIWordCard`, `TTUICardActionBar`, `TTUITabBar`
+- **주요 컴포넌트:** `TTUIWordCard`
+- **Deprecated:** `TTUICardActionBar`, `TTUITabBar` (제거 예정)
 - **Colors:** Named color assets in `Assets.xcassets` — light + dark mode for all 14 colors
 - **Card flip:** `TTUIFlipEffect` AnimatableModifier with `rotation3DEffect`
